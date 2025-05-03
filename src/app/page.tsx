@@ -8,14 +8,14 @@ import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import { calculateSavings, formatTime, formatCurrency, type SimulationResult } from '@/lib/calculateSavings';
-import { ArrowRight, Zap } from 'lucide-react';
+import { ArrowRight, Zap, HelpCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import ShadCN Tooltip
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 const DEFAULT_TRANSACTIONS = 1000;
 const MAX_TRANSACTIONS = 100000;
 
-// Updated use case parameters based on user request
 const useCaseParameters = {
   'Cosmos IBC': {
     costPerTxWithout: 55, // Midpoint of $10-$100
@@ -60,17 +60,28 @@ export default function Home() {
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [debouncedCount, setDebouncedCount] = useState<number>(DEFAULT_TRANSACTIONS);
   const [selectedUseCase, setSelectedUseCase] = useState<UseCase>('Cosmos IBC');
+  const [isLoading, setIsLoading] = useState(false); // Loading state for simulation
+
+    // Debounce input value
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedCount(transactionCount);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [transactionCount]);
 
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedCount(transactionCount);
-    }, 300);
-    return () => clearTimeout(handler);
-  }, [transactionCount]);
+    const calculate = async () => {
+        setIsLoading(true);
+        // Simulate some async work
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const result = calculateSavings(debouncedCount, useCaseParameters[selectedUseCase]);
+        setSimulationResult(result);
+        setIsLoading(false);
+    };
 
-  useEffect(() => {
-    const result = calculateSavings(debouncedCount, useCaseParameters[selectedUseCase]);
-    setSimulationResult(result);
+    calculate();
   }, [debouncedCount, selectedUseCase]);
 
   const handleSliderChange = (value: number[]) => {
@@ -136,7 +147,7 @@ export default function Home() {
         <main className="flex min-h-screen flex-col items-center justify-center p-4 md:p-8 lg:p-12 bg-gradient-to-br from-background via-secondary to-background">
             <div className="w-full max-w-6xl space-y-8">
                 <h1 className="text-3xl md:text-4xl font-bold text-center text-primary mb-8 flex items-center justify-center gap-2">
-                    <Zap className="w-8 h-8" /> Succinct ZkProof Simulator
+                    <Zap className="w-8 h-8 animate-pulse" /> Succinct ZkProof Simulator
                 </h1>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -236,7 +247,10 @@ export default function Home() {
                                         <TabsTrigger
                                             key={key}
                                             value={key}
-                                            className="text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md"
+                                            className={cn(
+                                                "text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-colors duration-200",
+                                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                            )}
                                         >
                                             {useCaseParameters[key as UseCase].name}
                                         </TabsTrigger>
@@ -258,6 +272,12 @@ export default function Home() {
                                         <div className="space-y-3">
                                             <label htmlFor={`transactionCountInput-${key}`} className="block text-sm font-medium text-foreground">
                                                 Number of Transactions:
+                                                 <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <HelpCircle className="inline-block w-4 h-4 ml-1 text-muted-foreground cursor-question" />
+                                                    </TooltipTrigger>
+                                                    {renderTooltipContent("Enter the number of transactions to simulate cost and time savings.")}
+                                                </Tooltip>
                                             </label>
                                             <div className="flex items-center gap-4">
                                                 <Input
@@ -284,7 +304,7 @@ export default function Home() {
                                         </div>
 
                                         {/* Results Display */}
-                                        {simulationResult && (
+                                        {simulationResult ? (
                                             <div className="space-y-4 flex-grow">
                                                 <h3 className="text-lg font-semibold text-primary">Simulation Results ({simulationResult.transactions.toLocaleString()} Tx):</h3>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -311,36 +331,53 @@ export default function Home() {
                                                 </div>
 
                                                 {/* Chart */}
-                                                <div className="h-48 md:h-64 w-full mt-6">
-                                                    <ResponsiveContainer width="100%" height="100%">
-                                                        <BarChart data={chartData} margin={{ top: 5, right: 0, left: 0, bottom: 5 }}>
-                                                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border)/0.5)" />
-                                                            <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                                                            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => typeof value === 'number' && value > 1000 ? `${(value / 1000).toFixed(0)}k` : value} />
-                                                            <RechartsTooltip
-                                                                contentStyle={{
-                                                                    backgroundColor: 'hsl(var(--card))',
-                                                                    borderColor: 'hsl(var(--border))',
-                                                                    color: 'hsl(var(--foreground))',
-                                                                    borderRadius: 'var(--radius)',
-                                                                    fontSize: '12px',
-                                                                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-                                                                }}
-                                                                formatter={(value, name, props) => {
-                                                                    if (props.dataKey === 'Without Succinct' || props.dataKey === 'With Succinct') {
-                                                                        if (props.payload.name === 'Cost') return formatCurrency(value as number);
-                                                                        if (props.payload.name === 'Time (s)') return formatTime(value as number);
-                                                                    }
-                                                                    return value;
-                                                                }}
-                                                                cursor={{ fill: 'hsl(var(--accent)/0.1)' }}
-                                                            />
-                                                            <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}/>
-                                                            <Bar dataKey="Without Succinct" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} barSize={20} />
-                                                            <Bar dataKey="With Succinct" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={20} />
-                                                        </BarChart>
-                                                    </ResponsiveContainer>
+                                                <div className="h-48 md:h-64 w-full mt-6 relative">
+                                                     {isLoading ? (
+                                                        <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
+                                                            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+                                                        </div>
+                                                    ) : (
+                                                        <ResponsiveContainer width="100%" height="100%">
+                                                            <BarChart data={chartData} margin={{ top: 5, right: 0, left: 0, bottom: 5 }}>
+                                                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border)/0.5)" />
+                                                                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                                                                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => typeof value === 'number' && value > 1000 ? `${(value / 1000).toFixed(0)}k` : value} />
+                                                                <RechartsTooltip
+                                                                    contentStyle={{
+                                                                        backgroundColor: 'hsl(var(--card))',
+                                                                        borderColor: 'hsl(var(--border))',
+                                                                        color: 'hsl(var(--foreground))',
+                                                                        borderRadius: 'var(--radius)',
+                                                                        fontSize: '12px',
+                                                                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                                                                    }}
+                                                                    formatter={(value, name, props) => {
+                                                                        if (props.dataKey === 'Without Succinct' || props.dataKey === 'With Succinct') {
+                                                                            if (props.payload.name === 'Cost') return formatCurrency(value as number);
+                                                                            if (props.payload.name === 'Time (s)') return formatTime(value as number);
+                                                                        }
+                                                                        return value;
+                                                                    }}
+                                                                    cursor={{ fill: 'hsl(var(--accent)/0.1)' }}
+                                                                />
+                                                                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}/>
+                                                                <Bar dataKey="Without Succinct" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} barSize={20} />
+                                                                <Bar dataKey="With Succinct" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={20} />
+                                                            </BarChart>
+                                                        </ResponsiveContainer>
+                                                    )}
                                                 </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-center h-48">
+                                                {isLoading ? (
+                                                    <div className="flex flex-col items-center">
+                                                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-2"></div>
+                                                        <p className="text-sm text-muted-foreground">Calculating savings...</p>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-muted-foreground">Enter transaction details to view simulation results.</p>
+                                                )}
                                             </div>
                                         )}
                                     </TabsContent>

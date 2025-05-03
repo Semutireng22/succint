@@ -6,6 +6,19 @@ body {
   font-family: var(--font-geist-mono), Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 
+/* Add terminal-like styles */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6); /* Dark semi-transparent overlay */
+  backdrop-filter: blur(5px); /* Apply a blur effect */
+  z-index: -1; /* Place behind the body content */
+}
+
 @layer base {
   :root {
     /* Light theme (adjust if needed, but focusing on dark as requested) */
@@ -89,4 +102,18 @@ body {
      /* Ensure dark mode is default */
     @apply dark;
   }
+}
+
+/* Add animation keyframes for loading state */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
