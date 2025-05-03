@@ -147,10 +147,6 @@ export default function Home() {
     <TooltipProvider>
         <main className="flex min-h-screen flex-col items-center justify-center p-4 md:p-8 lg:p-12 bg-gradient-to-br from-background via-secondary to-background">
             <div className="w-full max-w-6xl space-y-8">
-                <h1 className="text-3xl md:text-4xl font-bold text-center text-primary mb-8 flex items-center justify-center gap-2">
-                    <Zap className="w-8 h-8 animate-pulse" /> Succinct ZkProof Simulator
-                </h1>
-
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Project Overview Window */}
                     <TerminalWindow title="Project Overview & Technology" className="h-full">
@@ -169,22 +165,22 @@ export default function Home() {
                                             <TooltipTrigger asChild>
                                                 <span className="font-semibold text-primary border-b border-dashed border-primary cursor-help">SP1</span>
                                             </TooltipTrigger>
-                                            {renderTooltipContent("Succinct Prover 1: An open-source zkVM for generating ZK proofs from standard Rust code.")}
+                                            {renderTooltipContent("Succinct Prover 1: An open-source zkVM that generates ZK proofs from Rust code, simplifying blockchain verification.")}
                                         </Tooltip>
-                                        {' '} is a high-performance, open-source zkVM (Zero-Knowledge Virtual Machine) built in Rust. It allows developers to generate {' '}
+                                        {' '} developed by Succinct Labs, is a high-performance, open-source zkVM (Zero-Knowledge Virtual Machine) built in Rust. It enables developers to generate {' '}
                                         <Tooltip>
                                             <TooltipTrigger asChild>
                                                 <span className="font-semibold text-primary border-b border-dashed border-primary cursor-help">ZKPs</span>
                                             </TooltipTrigger>
-                                            {renderTooltipContent("Zero-Knowledge Proofs: Cryptographic proofs that verify data correctness without revealing the data itself, ensuring privacy and efficiency.")}
+                                            {renderTooltipContent("Zero-Knowledge Proofs: Verify data without revealing details, reducing costs and ensuring privacy, as in IBC Eureka.")}
                                         </Tooltip>
-                                        {' '} for any Rust program compiled to the RISC-V instruction set. This is used to efficiently and trustlessly verify blockchain consensus or other computations on target chains like Ethereum.
+                                        {' '} for Rust programs compiled to the RISC-V instruction set, requiring no deep cryptography expertise. SP1 efficiently verifies blockchain consensus, such as Tendermint for Cosmos in IBC Eureka or Ed25519 signatures in Blobstream, and integrates with the Succinct Prover Network for decentralized proof generation.
                                     </p>
                                     <p>
                                         Key benefits of{' '}
                                         <Tooltip>
                                             <TooltipTrigger asChild><span className="font-semibold text-primary border-b border-dashed border-primary cursor-help">SP1</span></TooltipTrigger>
-                                            {renderTooltipContent("Succinct Prover 1: An open-source zkVM for generating ZK proofs from standard Rust code.")}
+                                            {renderTooltipContent("Succinct Prover 1: Simplifies ZK proof generation with Rust, enabling fast and secure blockchain verification.")}
                                         </Tooltip>
                                         {' '} include: simplicity (write standard Rust), high performance, and open-source accessibility.
                                     </p>
@@ -192,14 +188,13 @@ export default function Home() {
                                         <code className="text-foreground/80">
                                             {'// Example: Simplified Rust code for SP1'}{'\n'}
                                             {'#![no_main]'}{'\n'}
-                                            {'use sp1_zkvm::io;'}{'\n'}
+                                            {'use sp1_zkvm::prelude::*;;'}{'\n'}
                                             {'\n'}
-                                            {'#[sp1_zkvm::entry]'}{'\n'}
                                             {'fn main() {'}{'\n'}
-                                            {'    let a = io::read::<u32>();'}{'\n'}
-                                            {'    let b = io::read::<u32>();'}{'\n'}
-                                            {'    let result = a.checked_add(b).expect("overflow");'}{'\n'}
-                                            {'    io::commit(&result);'}{'\n'}
+                                            {'    let input_hash: [u8; 32] = sp1_zkvm::io::read();'}{'\n'}
+                                            {'    let expected_hash: [u8; 32] = sp1_zkvm::io::read();'}{'\n'}
+                                            {'    let is_valid = input_hash == expected_hash;'}{'\n'}
+                                            {'    sp1_zkvm::io::commit(&is_valid);'}{'\n'}
                                             {'}'}
                                         </code>
                                     </pre>
@@ -210,14 +205,14 @@ export default function Home() {
                                             </TooltipTrigger>
                                             {renderTooltipContent("Zero-Knowledge Proofs: Verify data without revealing details, enhancing privacy and efficiency.")}
                                         </Tooltip>
-                                        {' '} enable {' '}
+                                        {' '} enable secure verification without intermediaries by replacing large datasets with small, efficient proofs. For example, in Blobstream, {' '}
                                          <Tooltip>
                                             <TooltipTrigger asChild>
-                                                <span className="font-semibold text-primary border-b border-dashed border-primary cursor-help">trustless</span>
+                                                <span className="font-semibold text-primary border-b border-dashed border-primary cursor-help">ZKPs</span>
                                             </TooltipTrigger>
-                                            {renderTooltipContent("Trustless: Systems that don't require trusting a central party; verification is done cryptographically.")}
+                                            {renderTooltipContent("Zero-Knowledge Proofs: Used in Blobstream to verify Celestia data on Ethereum, cutting costs and time.")}
                                         </Tooltip>
-                                        {' '} verification by replacing large amounts of data with small, easily verifiable proofs. This significantly reduces gas costs and verification times on blockchains like Ethereum.
+                                        {' '} cut costs from $10 to $0.5 and verification time from 10 minutes to 30 seconds on Ethereum.
                                     </p>
                                     {/* Basic Diagram Concept (using text/emoji for simplicity) */}
                                     <div className="text-center mt-2 p-2 bg-card border border-border/50 rounded">
@@ -388,32 +383,29 @@ export default function Home() {
                     </TerminalWindow>
                 </div>
                  {/* Consolidated Learn More Section */}
-                <Card className="mt-8 bg-card/90 border border-border shadow-md backdrop-blur-sm">
-                    <CardHeader>
-                        <CardTitle className="text-xl text-primary">Learn More About the Technology</CardTitle>
-                    </CardHeader>
+                 <TerminalWindow title="Learn More About the Technology" className="h-full">
                     <CardContent className="text-sm text-muted-foreground space-y-3">
                         <p>
-                           <strong>SP1 (Succinct Prover 1)</strong> is a groundbreaking zkVM that allows developers to prove the execution of standard Rust programs. This means complex logic, like verifying blockchain consensus, can be proven efficiently.
+                           <strong>SP1 (Succinct Prover 1)</strong> developed by Succinct Labs, is an open-source zkVM built in Rust, enabling developers to prove RISC-V program execution without deep cryptography expertise. It efficiently verifies complex logic, like Tendermint consensus in IBC Eureka, via the Succinct Prover Network.
                         </p>
                         <p>
-                           <strong>Zero-Knowledge Proofs (ZKPs)</strong> are the core cryptographic primitive enabling these advancements. They allow verification of computations without revealing underlying sensitive data, leading to massive improvements in scalability, privacy, and cost-efficiency for blockchain applications.
+                           <strong>Zero-Knowledge Proofs (ZKPs)</strong> verify data without revealing details, replacing large datasets with small proofs. For example, in Blobstream, ZKPs reduce costs from $10 to $0.5 and verification time from 10 minutes to 30 seconds, boosting scalability, privacy, and cost-efficiency.
                         </p>
                         <p>
-                            Together, SP1 and ZKPs enable use cases like the ones simulated above, making cross-chain communication and data availability verification significantly faster and cheaper in a trustless manner.
+                        Together, SP1 and ZKPs enable use cases like IBC Eureka, Blobstream, and VectorX, facilitating fast, low-cost, and secure cross-chain communication and data availability verification without intermediaries.
                         </p>
                          <div className="flex justify-center mt-4">
                             <Button
                                 variant="outline"
                                 size="sm"
                                 className="border-accent text-accent hover:bg-accent/10"
-                                onClick={() => window.open('https://succinct.xyz/blog', '_blank')}
+                                onClick={() => window.open('https://succinct.xyz/', '_blank')}
                             >
                                 Explore Succinct Blog <ArrowRight className="ml-1 w-3 h-3" />
                             </Button>
                          </div>
                     </CardContent>
-                </Card>
+                </TerminalWindow>
             </div>
         </main>
     </TooltipProvider>

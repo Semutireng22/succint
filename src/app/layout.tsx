@@ -29,12 +29,12 @@ export default function RootLayout({
             <img
               src="https://i.ibb.co.com/xKppcjWQ/Succinct-Logo.png"
               alt="Succinct Logo"
-              className="w-8 h-8 mr-2"
+              className="w-9 h-9 mr-2"
             />
-            <span className="font-bold text-lg">Succinct ZKProof Simulator</span>
+            <span className="font-bold text-lg"><h1>Succinct ZKProof Simulator</h1></span>
           </a>
         </header>
-        <main className="pt-16">
+        <main className="pt-0">
           {children}
           <Toaster /> {/* Add Toaster for potential notifications */}
         </main>
