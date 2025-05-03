@@ -2,32 +2,25 @@ export interface SimulationResult {
   transactions: number;
   costWithoutSuccinct: number;
   costWithSuccinct: number;
-  timeWithoutSuccinct: number; // in hours
-  timeWithSuccinct: number; // in hours
+  timeWithoutSuccinct: number; // in seconds
+  timeWithSuccinct: number; // in seconds
   costSavings: number;
-  timeSavings: number;
+  timeSavings: number; // in seconds
   costSavingsPercentage: number;
   timeSavingsPercentage: number;
 }
 
-// New: Define type for parameters
+// Type for use case parameters
 export type UseCaseParams = {
     costPerTxWithout: number;
     costPerTxWith: number;
     baseCostWith: number;
-    timePerTxWithout: number;
-    timePerBatchWith: number;
+    timePerTxWithout: number; // Time per tx without Succinct (in seconds)
+    timePerBatchWith: number; // Time per batch with Succinct (in seconds)
     name: string;
 };
 
-// Replace with actual benchmark data or more complex models.
-// const COST_PER_TX_WITHOUT = 0.005; // Example cost in USD per tx without Succinct
-// const COST_PER_TX_WITH = 0.0001; // Example cost in USD per tx with Succinct (batching effect)
-// const BASE_COST_WITH = 1; // Example base cost in USD for a single ZK proof batch with Succinct
-// const TIME_PER_TX_WITHOUT = 0.5; // Example verification time in minutes per tx without Succinct
-// const TIME_PER_BATCH_WITH = 10 / 60; // Example verification time in minutes for a ZK proof batch with Succinct
-
-// Modified: accept a UseCaseParams argument
+// Calculate savings based on transaction count and use case parameters
 export function calculateSavings(transactions: number, params: UseCaseParams): SimulationResult {
   if (transactions <= 0) {
     return {
@@ -44,11 +37,11 @@ export function calculateSavings(transactions: number, params: UseCaseParams): S
   }
 
   const costWithoutSuccinct = transactions * params.costPerTxWithout;
-  // Simplified cost model for Succinct: base cost + small per-tx cost (or just base cost if batching handles many)
+  // Simplified cost model: base cost + per-tx cost
   const costWithSuccinct = params.baseCostWith + transactions * params.costPerTxWith;
 
   const timeWithoutSuccinct = transactions * params.timePerTxWithout;
-  // Simplified time model for Succinct: assumes one batch proof covers all transactions
+  // Simplified time model: assumes one batch proof covers all transactions
   const timeWithSuccinct = params.timePerBatchWith;
 
   const costSavings = costWithoutSuccinct - costWithSuccinct;
@@ -59,30 +52,29 @@ export function calculateSavings(transactions: number, params: UseCaseParams): S
 
   return {
     transactions,
-    costWithoutSuccinct: parseFloat(costWithoutSuccinct.toFixed(4)),
-    costWithSuccinct: parseFloat(costWithSuccinct.toFixed(4)),
-    timeWithoutSuccinct: parseFloat(timeWithoutSuccinct.toFixed(2)),
-    timeWithSuccinct: parseFloat(timeWithSuccinct.toFixed(2)),
-    costSavings: parseFloat(costSavings.toFixed(4)),
-    timeSavings: parseFloat(timeSavings.toFixed(2)),
-    costSavingsPercentage: parseFloat(Math.max(0, costSavingsPercentage).toFixed(2)), // Ensure percentage is not negative
-    timeSavingsPercentage: parseFloat(Math.max(0, timeSavingsPercentage).toFixed(2)), // Ensure percentage is not negative
+    costWithoutSuccinct: parseFloat(costWithoutSuccinct.toFixed(2)), // Use 2 decimal places for currency
+    costWithSuccinct: parseFloat(costWithSuccinct.toFixed(2)),
+    timeWithoutSuccinct: parseFloat(timeWithoutSuccinct.toFixed(1)), // Use 1 decimal place for seconds
+    timeWithSuccinct: parseFloat(timeWithSuccinct.toFixed(1)),
+    costSavings: parseFloat(Math.max(0, costSavings).toFixed(2)), // Ensure non-negative
+    timeSavings: parseFloat(Math.max(0, timeSavings).toFixed(1)), // Ensure non-negative
+    costSavingsPercentage: parseFloat(Math.max(0, costSavingsPercentage).toFixed(1)), // Use 1 decimal place for percentage
+    timeSavingsPercentage: parseFloat(Math.max(0, timeSavingsPercentage).toFixed(1)),
   };
 }
 
-// Helper function to format time (hours to hh:mm or similar)
-export function formatTime(hours: number): string {
-    if (hours < 0) hours = 0;
-    if (hours < 1) {
-        const minutes = hours * 60;
-        return `${minutes.toFixed(1)}min`;
-    }
-    const fullHours = Math.floor(hours);
-    const minutes = Math.floor((hours - fullHours) * 60);
-    return `${fullHours}h ${minutes}m`;
+// Helper function to format time (seconds to readable format: s, min, h:m)
+export function formatTime(seconds: number): string {
+    if (seconds < 0) seconds = 0;
+    if (seconds < 60) return `${seconds.toFixed(1)}s`;
+    const minutes = seconds / 60;
+    if (minutes < 60) return `${minutes.toFixed(1)}min`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = (minutes % 60).toFixed(0);
+    return `${hours}h ${remainingMinutes}m`;
 }
 
 // Helper function to format currency
 export function formatCurrency(amount: number): string {
-    return `$${amount.toFixed(2)}`;
+    return `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
