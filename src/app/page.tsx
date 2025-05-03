@@ -9,15 +9,49 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { calculateSavings, formatTime, formatCurrency, type SimulationResult } from '@/lib/calculateSavings';
 import { ArrowRight, Zap } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const DEFAULT_TRANSACTIONS = 1000;
 const MAX_TRANSACTIONS = 100000;
+
+// New: Define use case parameters
+const useCaseParameters = {
+  'Cosmos IBC': {
+    costPerTxWithout: 0.01, // Average of $10-$100
+    costPerTxWith: 0.0005, // Average of $0.1-$1
+    baseCostWith: 0.5,
+    timePerTxWithout: 0.2083, // Average of 5-20 minutes in hours
+    timePerBatchWith: 0.0083, // In hours
+    name: 'Cosmos IBC'
+  },
+  'Celestia Blobstream': {
+    costPerTxWithout: 7.5, // Average of $5-$10
+    costPerTxWith: 0.3, // Average of $0.1-$0.5
+    baseCostWith: 0.3,
+    timePerTxWithout: 0.125, // Average of 5-10 minutes in hours
+    timePerBatchWith: 0.0083, // In hours
+    name: 'Celestia Blobstream'
+  },
+  'Avail VectorX': {
+    costPerTxWithout: 3, // Average of $1-$5
+    costPerTxWith: 0.3, // Average of $0.1-$0.5
+    baseCostWith: 0.3,
+    timePerTxWithout: 0.6667, // Average of 20-60 minutes in hours
+    timePerBatchWith: 0.0028, // In hours
+    name: 'Avail VectorX'
+  },
+};
+
+// New: Define type for use case selection
+type UseCase = keyof typeof useCaseParameters;
 
 export default function Home() {
   const [transactionCount, setTransactionCount] = useState<number>(DEFAULT_TRANSACTIONS);
   const [inputValue, setInputValue] = useState<string>(DEFAULT_TRANSACTIONS.toString());
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [debouncedCount, setDebouncedCount] = useState<number>(DEFAULT_TRANSACTIONS);
+  // New: Add state for selected use case, defaulting to Cosmos
+  const [selectedUseCase, setSelectedUseCase] = useState<UseCase>('Cosmos IBC');
 
    // Debounce transaction count update for calculations
   useEffect(() => {
@@ -33,12 +67,12 @@ export default function Home() {
   // Perform calculation when debounced count changes
   useEffect(() => {
      if (debouncedCount > 0) {
-       const result = calculateSavings(debouncedCount);
+       const result = calculateSavings(debouncedCount, useCaseParameters[selectedUseCase]);
        setSimulationResult(result);
      } else {
-       setSimulationResult(calculateSavings(0)); // Handle zero/negative case
+       setSimulationResult(calculateSavings(0, useCaseParameters[selectedUseCase])); // Handle zero/negative case
      }
-  }, [debouncedCount]);
+  }, [debouncedCount, selectedUseCase]);
 
 
   const handleSliderChange = (value: number[]) => {
@@ -71,6 +105,11 @@ export default function Home() {
     }
   };
 
+  // New: Handler for use case selection
+  const handleUseCaseChange = (value: UseCase) => {
+      setSelectedUseCase(value);
+  };
+
 
   const chartData = useMemo(() => {
     if (!simulationResult) return [];
@@ -82,7 +121,7 @@ export default function Home() {
       },
       // Scale time for better visualization - maybe represent in minutes if large
       {
-        name: 'Time (s)',
+        name: 'Time',
         'Without Succinct': simulationResult.timeWithoutSuccinct,
         'With Succinct': simulationResult.timeWithSuccinct,
       },
@@ -104,20 +143,33 @@ export default function Home() {
               <p><span className="text-primary font-semibold">$</span> This tool demonstrates the potential cost and time savings by integrating Succinct Labs' ZK technology for transaction verification.</p>
               <p><span className="text-muted-foreground"># Comparing traditional verification vs. Succinct ZK batch proofs.</span></p>
               <p><span className="text-primary font-semibold">$</span> Use the simulator below to input the number of transactions and see the difference.</p>
-              <div className="border-t border-border pt-4 mt-4 text-muted-foreground">
-                 <p>Traditional Method:</p>
-                 <ul className="list-disc list-inside ml-4">
-                     <li>Verifies each transaction individually on-chain.</li>
-                     <li>Cost scales linearly with transaction volume.</li>
-                     <li>Time scales linearly with transaction volume.</li>
-                 </ul>
-                 <p className="mt-2">With Succinct:</p>
-                 <ul className="list-disc list-inside ml-4">
-                     <li>Batches multiple transactions into a single ZK proof.</li>
-                     <li>Verifies the proof on-chain, independent of batch size.</li>
-                     <li>Significant cost and time savings, especially at scale.</li>
-                 </ul>
-              </div>
+
+              {/* New: Project Descriptions */}
+              {selectedUseCase === 'Cosmos IBC' && (
+                <div className="border-t border-border pt-4 mt-4 text-muted-foreground">
+                  <h4 className="font-semibold">Succinct x Cosmos - IBC Eureka</h4>
+                  <p>Connects 120 Cosmos chains to Ethereum with a fast, cheap, and trustless bridge.</p>
+                  <p><b>Without Succinct</b>: Cost $10-$100/tx, 5-20 min verification.</p>
+                  <p><b>With Succinct</b>: Cost $0.1-$1/tx, ~30 sec verification.</p>
+                </div>
+              )}
+              {selectedUseCase === 'Celestia Blobstream' && (
+                <div className="border-t border-border pt-4 mt-4 text-muted-foreground">
+                  <h4 className="font-semibold">Succinct x Celestia - Blobstream</h4>
+                  <p>Provides a trustless and cheap bridge between Celestia and Ethereum for data availability.</p>
+                  <p><b>Without Succinct</b>: Cost $5-$10/tx, 5-10 min verification.</p>
+                  <p><b>With Succinct</b>: Cost $0.1-$0.5/tx, ~30 sec verification.</p>
+                </div>
+              )}
+              {selectedUseCase === 'Avail VectorX' && (
+                <div className="border-t border-border pt-4 mt-4 text-muted-foreground">
+                  <h4 className="font-semibold">Succinct x Avail - VectorX</h4>
+                  <p>Enables Ethereum to validate Avail blockchain data quickly and cheaply.</p>
+                  <p><b>Without Succinct</b>: Cost $1-$5/tx, 20-60 min verification.</p>
+                  <p><b>With Succinct</b>: Cost $0.1-$0.5/tx, ~10 sec verification.</p>
+                </div>
+              )}
+
                <Button
                  variant="link"
                  className="text-accent hover:text-accent/80 p-0 h-auto"
@@ -131,6 +183,24 @@ export default function Home() {
           {/* Interactive Simulation Window */}
           <TerminalWindow title="Interactive Simulation" className="h-full flex flex-col">
              <div className="flex-grow flex flex-col space-y-6">
+                  {/* New: Use Case Selection */}
+                <div className="space-y-3">
+                    <label htmlFor="useCaseSelect" className="block text-sm font-medium text-foreground">
+                        Select Use Case:
+                    </label>
+                    <Select value={selectedUseCase} onValueChange={handleUseCaseChange} id="useCaseSelect">
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select a use case" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {Object.keys(useCaseParameters).map((key) => (
+                                <SelectItem key={key} value={key as UseCase}>
+                                    {useCaseParameters[key as UseCase].name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
                 {/* Input Section */}
                 <div className="space-y-3">
                     <label htmlFor="transactionCountInput" className="block text-sm font-medium text-foreground">
@@ -203,7 +273,7 @@ export default function Home() {
                                    }}
                                    formatter={(value, name, props) => {
                                       if (props.payload.name === 'Cost') return formatCurrency(value as number);
-                                      if (props.payload.name === 'Time (s)') return formatTime(value as number);
+                                      if (props.payload.name === 'Time') return formatTime(value as number);
                                       return value;
                                    }}
                                />
@@ -222,3 +292,4 @@ export default function Home() {
     </main>
   );
 }
+

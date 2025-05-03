@@ -2,23 +2,33 @@ export interface SimulationResult {
   transactions: number;
   costWithoutSuccinct: number;
   costWithSuccinct: number;
-  timeWithoutSuccinct: number; // in seconds
-  timeWithSuccinct: number; // in seconds
+  timeWithoutSuccinct: number; // in hours
+  timeWithSuccinct: number; // in hours
   costSavings: number;
   timeSavings: number;
   costSavingsPercentage: number;
   timeSavingsPercentage: number;
 }
 
-// These are placeholder values and assumptions.
-// Replace with actual benchmark data or more complex models.
-const COST_PER_TX_WITHOUT = 0.005; // Example cost in USD per tx without Succinct
-const COST_PER_TX_WITH = 0.0001; // Example cost in USD per tx with Succinct (batching effect)
-const BASE_COST_WITH = 1; // Example base cost in USD for a single ZK proof batch with Succinct
-const TIME_PER_TX_WITHOUT = 0.5; // Example verification time in seconds per tx without Succinct
-const TIME_PER_BATCH_WITH = 10; // Example verification time in seconds for a ZK proof batch with Succinct
+// New: Define type for parameters
+export type UseCaseParams = {
+    costPerTxWithout: number;
+    costPerTxWith: number;
+    baseCostWith: number;
+    timePerTxWithout: number;
+    timePerBatchWith: number;
+    name: string;
+};
 
-export function calculateSavings(transactions: number): SimulationResult {
+// Replace with actual benchmark data or more complex models.
+// const COST_PER_TX_WITHOUT = 0.005; // Example cost in USD per tx without Succinct
+// const COST_PER_TX_WITH = 0.0001; // Example cost in USD per tx with Succinct (batching effect)
+// const BASE_COST_WITH = 1; // Example base cost in USD for a single ZK proof batch with Succinct
+// const TIME_PER_TX_WITHOUT = 0.5; // Example verification time in minutes per tx without Succinct
+// const TIME_PER_BATCH_WITH = 10 / 60; // Example verification time in minutes for a ZK proof batch with Succinct
+
+// Modified: accept a UseCaseParams argument
+export function calculateSavings(transactions: number, params: UseCaseParams): SimulationResult {
   if (transactions <= 0) {
     return {
       transactions: 0,
@@ -33,13 +43,13 @@ export function calculateSavings(transactions: number): SimulationResult {
     };
   }
 
-  const costWithoutSuccinct = transactions * COST_PER_TX_WITHOUT;
+  const costWithoutSuccinct = transactions * params.costPerTxWithout;
   // Simplified cost model for Succinct: base cost + small per-tx cost (or just base cost if batching handles many)
-  const costWithSuccinct = BASE_COST_WITH + transactions * COST_PER_TX_WITH;
+  const costWithSuccinct = params.baseCostWith + transactions * params.costPerTxWith;
 
-  const timeWithoutSuccinct = transactions * TIME_PER_TX_WITHOUT;
+  const timeWithoutSuccinct = transactions * params.timePerTxWithout;
   // Simplified time model for Succinct: assumes one batch proof covers all transactions
-  const timeWithSuccinct = TIME_PER_BATCH_WITH;
+  const timeWithSuccinct = params.timePerBatchWith;
 
   const costSavings = costWithoutSuccinct - costWithSuccinct;
   const timeSavings = timeWithoutSuccinct - timeWithSuccinct;
@@ -60,15 +70,16 @@ export function calculateSavings(transactions: number): SimulationResult {
   };
 }
 
-// Helper function to format time (seconds to hh:mm:ss or similar)
-export function formatTime(seconds: number): string {
-    if (seconds < 0) seconds = 0;
-    if (seconds < 60) return `${seconds.toFixed(1)}s`;
-    if (seconds < 3600) return `${(seconds / 60).toFixed(1)}min`;
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = (seconds % 60).toFixed(0);
-    return `${hours}h ${minutes}m ${remainingSeconds}s`;
+// Helper function to format time (hours to hh:mm or similar)
+export function formatTime(hours: number): string {
+    if (hours < 0) hours = 0;
+    if (hours < 1) {
+        const minutes = hours * 60;
+        return `${minutes.toFixed(1)}min`;
+    }
+    const fullHours = Math.floor(hours);
+    const minutes = Math.floor((hours - fullHours) * 60);
+    return `${fullHours}h ${minutes}m`;
 }
 
 // Helper function to format currency
