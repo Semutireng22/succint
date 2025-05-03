@@ -1,3 +1,224 @@
+'use client';
+
+import { useState, useMemo, useEffect } from 'react';
+import TerminalWindow from '@/components/terminal-window';
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { calculateSavings, formatTime, formatCurrency, type SimulationResult } from '@/lib/calculateSavings';
+import { ArrowRight, Zap } from 'lucide-react';
+
+const DEFAULT_TRANSACTIONS = 1000;
+const MAX_TRANSACTIONS = 100000;
+
 export default function Home() {
-  return <></>;
+  const [transactionCount, setTransactionCount] = useState<number>(DEFAULT_TRANSACTIONS);
+  const [inputValue, setInputValue] = useState<string>(DEFAULT_TRANSACTIONS.toString());
+  const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
+  const [debouncedCount, setDebouncedCount] = useState<number>(DEFAULT_TRANSACTIONS);
+
+   // Debounce transaction count update for calculations
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedCount(transactionCount);
+    }, 300); // 300ms debounce delay
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [transactionCount]);
+
+  // Perform calculation when debounced count changes
+  useEffect(() => {
+     if (debouncedCount > 0) {
+       const result = calculateSavings(debouncedCount);
+       setSimulationResult(result);
+     } else {
+       setSimulationResult(calculateSavings(0)); // Handle zero/negative case
+     }
+  }, [debouncedCount]);
+
+
+  const handleSliderChange = (value: number[]) => {
+    const newCount = value[0];
+    setTransactionCount(newCount);
+    setInputValue(newCount.toString());
+  };
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setInputValue(value);
+    const numValue = parseInt(value, 10);
+    if (!isNaN(numValue) && numValue >= 0 && numValue <= MAX_TRANSACTIONS) {
+      setTransactionCount(numValue);
+    } else if (value === '') {
+       setTransactionCount(0);
+    }
+  };
+
+   const handleInputBlur = () => {
+    const numValue = parseInt(inputValue, 10);
+    if (isNaN(numValue) || numValue < 0) {
+      setTransactionCount(0);
+      setInputValue('0');
+    } else if (numValue > MAX_TRANSACTIONS) {
+      setTransactionCount(MAX_TRANSACTIONS);
+      setInputValue(MAX_TRANSACTIONS.toString());
+    } else {
+       // Already handled by handleInputChange + debounce
+    }
+  };
+
+
+  const chartData = useMemo(() => {
+    if (!simulationResult) return [];
+    return [
+      {
+        name: 'Cost',
+        'Without Succinct': simulationResult.costWithoutSuccinct,
+        'With Succinct': simulationResult.costWithSuccinct,
+      },
+      // Scale time for better visualization - maybe represent in minutes if large
+      {
+        name: 'Time (s)',
+        'Without Succinct': simulationResult.timeWithoutSuccinct,
+        'With Succinct': simulationResult.timeWithSuccinct,
+      },
+    ];
+  }, [simulationResult]);
+
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center p-4 md:p-8 lg:p-12 bg-gradient-to-br from-background via-secondary to-background">
+      <div className="w-full max-w-6xl space-y-8">
+        <h1 className="text-3xl md:text-4xl font-bold text-center text-primary mb-8 flex items-center justify-center gap-2">
+          <Zap className="w-8 h-8" /> Succinct ZkProof Simulator
+        </h1>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Project Overview Window */}
+          <TerminalWindow title="Project Overview - ZkProof Comparison" className="h-full">
+            <div className="space-y-4 text-sm md:text-base">
+              <p><span className="text-primary font-semibold">$</span> Welcome to the Succinct ZkProof Simulator.</p>
+              <p><span className="text-primary font-semibold">$</span> This tool demonstrates the potential cost and time savings by integrating Succinct Labs' ZK technology for transaction verification.</p>
+              <p><span className="text-muted-foreground"># Comparing traditional verification vs. Succinct ZK batch proofs.</span></p>
+              <p><span className="text-primary font-semibold">$</span> Use the simulator below to input the number of transactions and see the difference.</p>
+              <div className="border-t border-border pt-4 mt-4 text-muted-foreground">
+                 <p>Traditional Method:</p>
+                 <ul className="list-disc list-inside ml-4">
+                     <li>Verifies each transaction individually on-chain.</li>
+                     <li>Cost scales linearly with transaction volume.</li>
+                     <li>Time scales linearly with transaction volume.</li>
+                 </ul>
+                 <p className="mt-2">With Succinct:</p>
+                 <ul className="list-disc list-inside ml-4">
+                     <li>Batches multiple transactions into a single ZK proof.</li>
+                     <li>Verifies the proof on-chain, independent of batch size.</li>
+                     <li>Significant cost and time savings, especially at scale.</li>
+                 </ul>
+              </div>
+               <Button
+                 variant="link"
+                 className="text-accent hover:text-accent/80 p-0 h-auto"
+                 onClick={() => window.open('https://succinct.xyz', '_blank')}
+               >
+                 Learn more at succinct.xyz <ArrowRight className="ml-1 w-4 h-4" />
+               </Button>
+            </div>
+          </TerminalWindow>
+
+          {/* Interactive Simulation Window */}
+          <TerminalWindow title="Interactive Simulation" className="h-full flex flex-col">
+             <div className="flex-grow flex flex-col space-y-6">
+                {/* Input Section */}
+                <div className="space-y-3">
+                    <label htmlFor="transactionCountInput" className="block text-sm font-medium text-foreground">
+                        Number of Transactions:
+                    </label>
+                    <div className="flex items-center gap-4">
+                        <Input
+                            id="transactionCountInput"
+                            type="number"
+                            min="0"
+                            max={MAX_TRANSACTIONS}
+                            value={inputValue}
+                            onChange={handleInputChange}
+                            onBlur={handleInputBlur}
+                            className="w-32 bg-input text-foreground"
+                            aria-label="Number of Transactions"
+                        />
+                        <Slider
+                            value={[transactionCount]}
+                            onValueChange={handleSliderChange}
+                            max={MAX_TRANSACTIONS}
+                            step={Math.max(1, Math.floor(MAX_TRANSACTIONS / 100))} // Dynamic step
+                            className="flex-1"
+                            aria-label="Transaction Count Slider"
+                        />
+                    </div>
+                     <p className="text-xs text-muted-foreground">Slide or type a value between 0 and {MAX_TRANSACTIONS.toLocaleString()}.</p>
+                </div>
+
+                 {/* Results Display */}
+                {simulationResult && (
+                    <div className="space-y-4 flex-grow">
+                        <h3 className="text-lg font-semibold text-primary">Simulation Results ({simulationResult.transactions.toLocaleString()} Transactions):</h3>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                           <Card className="bg-card/80">
+                             <CardHeader className="pb-2">
+                               <CardTitle className="text-base font-medium text-muted-foreground">Cost Comparison</CardTitle>
+                             </CardHeader>
+                             <CardContent>
+                               <p>Without Succinct: <span className="font-semibold">{formatCurrency(simulationResult.costWithoutSuccinct)}</span></p>
+                               <p>With Succinct: <span className="font-semibold text-primary">{formatCurrency(simulationResult.costWithSuccinct)}</span></p>
+                               <p className="mt-2 text-accent">Savings: {formatCurrency(simulationResult.costSavings)} ({simulationResult.costSavingsPercentage}%)</p>
+                             </CardContent>
+                           </Card>
+                           <Card className="bg-card/80">
+                               <CardHeader className="pb-2">
+                                   <CardTitle className="text-base font-medium text-muted-foreground">Time Comparison</CardTitle>
+                               </CardHeader>
+                               <CardContent>
+                                   <p>Without Succinct: <span className="font-semibold">{formatTime(simulationResult.timeWithoutSuccinct)}</span></p>
+                                   <p>With Succinct: <span className="font-semibold text-primary">{formatTime(simulationResult.timeWithSuccinct)}</span></p>
+                                    <p className="mt-2 text-accent">Savings: {formatTime(simulationResult.timeSavings)} ({simulationResult.timeSavingsPercentage}%)</p>
+                               </CardContent>
+                           </Card>
+                         </div>
+
+                         {/* Chart */}
+                         <div className="h-48 md:h-64 w-full mt-4">
+                           <ResponsiveContainer width="100%" height="100%">
+                             <BarChart data={chartData} margin={{ top: 5, right: 0, left: 0, bottom: 5 }}>
+                               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                               <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                               <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => typeof value === 'number' && value > 1000 ? `${(value/1000).toFixed(0)}k` : value} />
+                               <Tooltip
+                                   contentStyle={{
+                                       backgroundColor: 'hsl(var(--card))',
+                                       borderColor: 'hsl(var(--border))',
+                                       color: 'hsl(var(--foreground))',
+                                       borderRadius: 'var(--radius)',
+                                   }}
+                                   formatter={(value, name, props) => {
+                                      if (props.payload.name === 'Cost') return formatCurrency(value as number);
+                                      if (props.payload.name === 'Time (s)') return formatTime(value as number);
+                                      return value;
+                                   }}
+                               />
+                               <Legend wrapperStyle={{ fontSize: '12px' }}/>
+                               <Bar dataKey="Without Succinct" fill="hsl(var(--secondary-foreground))" radius={[4, 4, 0, 0]} />
+                               <Bar dataKey="With Succinct" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                             </BarChart>
+                           </ResponsiveContainer>
+                         </div>
+                    </div>
+                )}
+            </div>
+          </TerminalWindow>
+        </div>
+      </div>
+    </main>
+  );
 }
